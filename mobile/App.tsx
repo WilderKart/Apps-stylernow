@@ -1,0 +1,1 @@
+import { StatusBar } from 'expo-status-bar';\nimport React from 'react';\nimport { SafeAreaProvider } from 'react-native-safe-area-context';\nimport AppNavigator from './src/navigation/AppNavigator';\n\nexport default function App() {\n  return (\n    <SafeAreaProvider>\n      <StatusBar style=\"dark\" />\n      <AppNavigator />\n    </SafeAreaProvider>\n  );\n}\n

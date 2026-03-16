@@ -1,0 +1,98 @@
+[
+  {
+    "id": "T01",
+    "fase": "FASE 1 — ANÁLISIS DEL PROYECTO",
+    "tarea": "Análisis de Mercado y Producto",
+    "agentes": ["Market Research Agent", "User Research Agent", "Product Manager Agent"],
+    "estado": "completado",
+    "dependencias": []
+  },
+  {
+    "id": "T02",
+    "fase": "FASE 2 — DEFINICIÓN DEL PRODUCTO",
+    "tarea": "Roadmap y Definición Técnica",
+    "agentes": ["Product Manager", "Project Manager", "CTO Agent"],
+    "estado": "en_progreso",
+    "dependencias": ["T01"]
+  },
+  {
+    "id": "T03",
+    "fase": "FASE 3 — ARQUITECTURA DEL SISTEMA",
+    "tarea": "Backend, DB, Frontend Architecture, Zero Trust",
+    "agentes": ["Backend Architect", "Cloud Architect", "Database Architect", "Security Engineer", "Frontend Architect"],
+    "estado": "pendiente",
+    "dependencias": ["T02"]
+  },
+  {
+    "id": "T04",
+    "fase": "FASE 4 — UX",
+    "tarea": "User flows y Wireframes",
+    "agentes": ["UX Architect", "User Research Agent"],
+    "estado": "pendiente",
+    "dependencias": ["T02", "T03"]
+  },
+  {
+    "id": "T05",
+    "fase": "FASE 5 — UI",
+    "tarea": "Sistema de Diseño (B/N) y Componentes",
+    "agentes": ["UI Designer", "Design System Agent", "Motion Designer", "Copywriting Agent"],
+    "estado": "pendiente",
+    "dependencias": ["T04"]
+  },
+  {
+    "id": "T06",
+    "fase": "FASE 6 — DESARROLLO",
+    "tarea": "Implementación técnica Frontend, Backend y Mobile",
+    "agentes": ["Frontend Dev", "Backend Dev", "Mobile Dev", "Database Architect"],
+    "estado": "pendiente",
+    "dependencias": ["T03", "T05"]
+  },
+  {
+    "id": "T07",
+    "fase": "FASE 7 — INFRAESTRUCTURA",
+    "tarea": "Configuración CI/CD, Supabase, Vercel",
+    "agentes": ["DevOps", "Cloud Architect"],
+    "estado": "pendiente",
+    "dependencias": ["T06"]
+  },
+  {
+    "id": "T08",
+    "fase": "FASE 8 — SEGURIDAD",
+    "tarea": "Zero Trust, Cifrado, Auditorías OWASP",
+    "agentes": ["Security Engineer", "Code Auditor"],
+    "estado": "pendiente",
+    "dependencias": ["T06"]
+  },
+  {
+    "id": "T09",
+    "fase": "FASE 9 — TESTING",
+    "tarea": "Pruebas QA, Automatización, UX",
+    "agentes": ["QA Engineer", "QA Automation Agent"],
+    "estado": "pendiente",
+    "dependencias": ["T06"]
+  },
+  {
+    "id": "T10",
+    "fase": "FASE 10 — OPTIMIZACIÓN",
+    "tarea": "Perfomance y Accesibilidad",
+    "agentes": ["Frontend Architect", "Backend Architect", "SEO Specialist"],
+    "estado": "pendiente",
+    "dependencias": ["T09"]
+  },
+  {
+    "id": "T11",
+    "fase": "FASE 11 — CRECIMIENTO",
+    "tarea": "Landing web, Estrategias de adquisición",
+    "agentes": ["Growth Marketing Agent", "SEO Specialist", "Copywriting Agent"],
+    "estado": "pendiente",
+    "dependencias": ["T05", "T06"]
+  },
+  {
+    "id": "T12",
+    "fase": "FASE 12 — DOCUMENTACIÓN",
+    "tarea": "Manual de usuario, Guía de despliegue, Changlog, etc.",
+    "agentes": ["Todos"],
+    "estado": "en_progreso",
+    "dependencias": []
+  }
+]
