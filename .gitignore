@@ -56,3 +56,6 @@ ios/
 # Project specific
 supabase/.branches/
 supabase/.temp/
+
+# packaged files
+scripts/packaged-*.json
