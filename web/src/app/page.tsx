@@ -1,11 +1,22 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
+import Logo from '@/components/Logo';
+import OnboardingCarousel from '@/components/OnboardingCarousel';
 
 export default function Home() {
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
   return (
-    <div className="min-h-screen bg-white text-[#1A1A1A] font-sans selection:bg-[#1A1A1A] selection:text-white">
+    <>
+      {showOnboarding && <OnboardingCarousel onClose={() => setShowOnboarding(false)} />}
+      
+      <div className="min-h-screen bg-white text-[#1A1A1A] font-sans selection:bg-[#1A1A1A] selection:text-white">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-        <div className="text-2xl font-bold tracking-tighter">StylerNow</div>
+        <div className="flex items-center gap-2">
+          <Logo className="w-8 h-8" />
+        </div>
         <nav className="hidden md:flex gap-8 items-center">
           <a href="#caracteristicas" className="text-sm font-medium hover:text-gray-500 transition-colors">Características</a>
           <a href="#planes" className="text-sm font-medium hover:text-gray-500 transition-colors">Planes</a>
@@ -66,6 +77,7 @@ export default function Home() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }

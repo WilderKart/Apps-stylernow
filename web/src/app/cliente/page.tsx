@@ -58,11 +58,8 @@ export default function ClienteHome() {
           
           {/* Barber Card Mock */}
           <div className="w-full flex flex-col rounded-2xl border border-zinc-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-            <div className="w-full h-32 bg-zinc-200 relative">
-              {/* Image Placeholder */}
-              <div className="absolute inset-0 flex items-center justify-center text-zinc-400 bg-zinc-100">
-                <span className="text-xs font-semibold uppercase tracking-widest">Image Galería</span>
-              </div>
+            <div className="w-full h-32 bg-zinc-100 relative">
+              <img src="/imagenes/barberias/premium.png" alt="The Gentlemen's Club" className="w-full h-full object-cover" />
               <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded text-xs font-bold text-black flex items-center gap-1 shadow-sm">
                 <span>⭐</span> 4.9
               </div>
@@ -83,10 +80,8 @@ export default function ClienteHome() {
           </div>
 
           <div className="w-full flex flex-col rounded-2xl border border-zinc-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-            <div className="w-full h-32 bg-zinc-200 relative">
-              <div className="absolute inset-0 flex items-center justify-center text-zinc-400 bg-zinc-100">
-                <span className="text-xs font-semibold uppercase tracking-widest">Image Galería</span>
-              </div>
+            <div className="w-full h-32 bg-zinc-100 relative">
+              <img src="/imagenes/barberias/urban.png" alt="Urban Kings Barber" className="w-full h-full object-cover" />
               <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded text-xs font-bold text-black flex items-center gap-1 shadow-sm">
                 <span>⭐</span> 4.7
               </div>

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useTransition } from 'react';
 import { login, signup } from './actions';
+import Logo from '@/components/Logo';
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
@@ -25,8 +26,9 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-black/5 border border-zinc-100">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-extrabold text-[#1A1A1A] tracking-tighter">StylerNow</h1>
+      <div className="text-center mb-8 flex flex-col items-center">
+        <Logo markOnly={true} className="w-12 h-12 mb-2" />
+        <h1 className="text-2xl font-extrabold text-[#1A1A1A] tracking-tighter">StylerNow</h1>
         <p className="text-sm text-zinc-500 mt-2 font-medium">Ingresa a tu cuenta o regístrate</p>
       </div>
 

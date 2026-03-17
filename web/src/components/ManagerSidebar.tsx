@@ -40,11 +40,11 @@ export default function ManagerSidebar({ isOpen, setIsOpen }: { isOpen?: boolean
 
           <div className="mb-4">
             <p className="px-4 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Gestión</p>
-            <Link onClick={() => setIsOpen?.(false)} href="#" className="flex items-center gap-3 px-4 py-2.5 text-zinc-500 hover:text-black hover:bg-zinc-50 rounded-xl font-bold transition-all">
+            <Link onClick={() => setIsOpen?.(false)} href="/dashboard/equipo" className="flex items-center gap-3 px-4 py-2.5 text-zinc-500 hover:text-black hover:bg-zinc-50 rounded-xl font-bold transition-all">
               <Users className="w-5 h-5" />
               <span className="text-sm">Staff Activo</span>
             </Link>
-            <Link onClick={() => setIsOpen?.(false)} href="#" className="flex items-center gap-3 px-4 py-2.5 text-zinc-500 hover:text-black hover:bg-zinc-50 rounded-xl font-bold transition-all mt-1">
+            <Link onClick={() => setIsOpen?.(false)} href="/dashboard/inventario" className="flex items-center gap-3 px-4 py-2.5 text-zinc-500 hover:text-black hover:bg-zinc-50 rounded-xl font-bold transition-all mt-1">
               <ClipboardList className="w-5 h-5" />
               <span className="text-sm">Inventario & Cajas</span>
             </Link>

@@ -48,9 +48,9 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (
             <Users className="w-4 h-4" /> Equipo
           </Link>
           <Link 
-            href="#" 
+            href="/dashboard/promociones" 
             onClick={() => setIsOpen?.(false)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gray-50 text-black transition-colors border border-gray-100"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 text-gray-700 hover:text-black transition-colors"
           >
             <Megaphone className="w-4 h-4 text-green-500" /> Promociones
           </Link>
