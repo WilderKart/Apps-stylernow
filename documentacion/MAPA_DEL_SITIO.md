@@ -1,45 +1,67 @@
-# MAPA DEL SITIO - StylerNow
+# 🗺️ MAPA DEL SITIO Y ENRUTAMIENTO POR ROL (V10.7.2)
 
-El flujo de usuario está dividido radicalmente entre el **Panel Administrativo (Dueños/Staff)** y la **App Cliente (Usuarios Finales)**.
-
-## 1. Web App (PWA & Panel Admnistrativo)
-
-### `/:home` (Landing PWA)
-- `/ingresar` (Login/Registro)
-- Autenticación multifactor/Magic Link (Supabase Auth).
-
-### `/:dashboard` (Para Master y Manager)
-- `/dashboard/resumen` (Kpis, Citas del día, Ingresos).
-- `/dashboard/agenda` (Visualización de calendario, Barberos y Horarios).
-- `/dashboard/barberos` (Gestión de staff, % comisiones, Propinas, Insignias).
-- `/dashboard/marketing` (Promociones Inteligentes, Push Notifications y Resend).
-- `/dashboard/finanzas` (Módulo exclusivo PRESTIGE/SIGNATURE, comisiones detalladas).
-- `/dashboard/configuracion` (Brand White-label, Subir Logos, Editar Paleta Monocromática).
-
-### `/:staff` (Para Barberos)
-- `/staff/mi-agenda` (Visualizar citas asignadas).
-- `/staff/mis-ingresos` (Comisiones generadas, RLS activado para ocultar otras ganancias).
-- `/staff/mi-perfil` (Ver Insignia actual, Actualizar Especialidades y Fotos a *My Look*).
+Este documento detalla la estructura completa de rutas de **StylerNow**, especificando accesos, flujos de autenticación (Zero Trust) y operaciones permitidas para cada rol dentro del ecosistema.
 
 ---
 
-## 2. Mobile App (Clientes Finales)
+## 🔐 1. FLUJO DE AUTENTICACIÓN (Zero Trust Fintech)
 
-### Navegación Principal (React Navigation - Tabs)
-- **Home (`/home`)**:
-  - Buscador tipo "Uber" por geolocalización o nombre de barbería.
-  - Banner dinámico de Ofertas y Promociones Activas según la barbería.
-- **Reservas (`/reservas`)**:
-  - Historial de citas pasadas.
-  - Citas Próximas con código QR para Check-in.
-- **Perfil (`/perfil`)**:
-  - Gestión de Membresías.
-  - Fidelización (Programa de Puntos).
-  - Métodos de Pago Gardados.
+El sistema opera con control estricto desde el backend, asegurando que ningún usuario salte etapas de validación.
 
-### Flujo de Reserva
-1. `Buscar Barbería` → `Ver Catálogo y Estilos (My Look)`
-2. `Seleccionar Barbero` (Ver Especialidad e Insignia: Artesano/Pro/Expert).
-3. `Seleccionar Servicio/Combo` (Precios dinámicos/Promociones).
-4. `Seleccionar Horario`
-5. `Pagar Anticipo` → Generar Reserva → Envío de SMS/Email (Resend).
+| Evento / Acción | Ruta Destino | Propósito / Acción Permitida |
+| :--- | :--- | :--- |
+| **Registro (Submit)** | `/auth/register` | Formula datos de acceso (`manager`/`barbero`). Guarda perfiles pre-activados. |
+| **Confirmación de Email** | `/auth/callback` | Valida código Supabase. **Auto-SignOut** obligatorio para evitar entrada ciega. |
+| **Login Segmentado** | `/auth/login?role=[rol]` | Despliega formulario personalizado según rol (`shop_owner`, `barber`, `client`). |
+
+---
+
+## 👔 2. ROL: Manager / Dueño de Barbería (`manager`)
+Responsable de la administración del local, staff, promociones y flujos financieros.
+
+### 📍 Fase 1: Onboarding (Sin Local Creado)
+| Ruta de Acceso | Qué se puede hacer / Propósito |
+| :--- | :--- |
+| `📂 /onboarding` | Formulario de creación de Barbería. Ingresa Nombre, Dirección, Geolocalización, Teléfono y NIT. |
+| `📂 /onboarding/status` | Vista de espera. Despliega estado: **"En Revisión"**. Bloquea accesos hasta aval de `admin`. |
+
+### 📍 Fase 2: Consolidado (Barbería Activa)
+| Ruta de Acceso | Qué se puede hacer / Propósito |
+| :--- | :--- |
+| `📂 /dashboard` | **KPIs y Resumen**: Facturación del día, citas activas y rendimiento de staff. |
+| `📂 /dashboard/agenda` | **Calendario Global**: Asignar citas, mover horarios, registrar bloqueos de Agenda. |
+| `📂 /dashboard/barberos` | **Staff Management**: Comisiones, propinas, insignias (Artesano, Pro, Expert). |
+| `📂 /dashboard/marketing` | **Crecimiento**: Crear descuentos, cupones y programar notificaciones Push (Resend). |
+| `📂 /dashboard/finanzas` | **Cuentas**: Exclusivo para auditorías de ganancias, pagos a staff y corte de caja. |
+
+---
+
+## 💈 3. ROL: Barbero Staff (`barbero`)
+Focado en la visualización de su propio flujo de trabajo sin visibilidad de datos globales.
+
+| Ruta de Acceso | Qué se puede hacer / Propósito |
+| :--- | :--- |
+| `📂 /staff/mi-agenda` | Ver citas asignadas en tiempo real. Registrar "Servicio Completado". |
+| `📂 /staff/mis-ingresos` | Desglose de comisiones acumuladas y propinas. **RLS activado** (no lee otros barberos). |
+| `📂 /staff/mi-perfil` | Ver rango de insignia actual, actualizar especialidades y fotos para portafolio. |
+
+---
+
+## 📱 4. ROL: Cliente (`cliente`)
+Usuarios finales que consumen el servicio de reserva y fidelidad.
+
+| Ruta de Acceso | Qué se puede hacer / Propósito |
+| :--- | :--- |
+| `📂 /cliente` | **Home PWA**: Buscador geolocalizado ("Tipo Uber") para dar con barberías cercanas. |
+| `📂 /cliente/reservas` | Historial de citas. Citas próximas con código QR de check-in rápido. |
+| `📂 /cliente/perfil` | Gestión de suscripción, pasarelas de pago y saldo de puntos de fidelización. |
+
+---
+
+## 👑 5. ROL: Administrador General (`admin`)
+Módulo backoffice de control de tenants y auditoría.
+
+| Ruta de Acceso | Qué se puede hacer / Propósito |
+| :--- | :--- |
+| `📂 /admin` | Listado de barberías nacientes pendientes de aprobación. Pulsar **"Aprobar"** / **"Rechazar"**. |
+| `📂 /admin/soporte` | Gestión de tickets, auditorías de logs de seguridad y bloqueo preventivo de tenants. |

@@ -12,13 +12,20 @@ export default async function OnboardingPage() {
   // Check if already has a tenant (skip onboarding)
   const { data: existingTenant } = await supabase
     .from('tenants')
-    .select('id, onboarding_completed')
+    .select('id, status')
     .eq('owner_id', user.id)
     .single()
 
-  if (existingTenant?.onboarding_completed) {
-    redirect('/dashboard')
+  if (existingTenant) {
+     const status = existingTenant.status || 'pending_review';
+     if (status === 'approved') {
+        redirect('/dashboard');
+     } else {
+        redirect('/onboarding/status');
+     }
   }
+
+
 
   // Fetch service catalog
   const { data: catalog } = await supabase

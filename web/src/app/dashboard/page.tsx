@@ -12,14 +12,23 @@ export default async function DashboardHome() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/ingresar')
 
-  // Fetch tenant
+  // 🛡️ CAPA 1: Cargar Tenant mediante Memberships (Soporte multi-rol)
+  const { data: membership } = await supabase
+    .from('memberships')
+    .select('tenant_id, role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  // Si no tiene membresía, enviar a onboarding
+  if (!membership) redirect('/onboarding')
+
+  // Cargar tenant desde la relación de membresía
   const { data: tenant } = await supabase
     .from('tenants')
     .select('*')
-    .eq('owner_id', user.id)
+    .eq('id', membership.tenant_id)
     .single() as { data: Tenant | null }
 
-  // If no tenant yet, send to onboarding
   if (!tenant) redirect('/onboarding')
 
   // Check trial expiry for FREE plan

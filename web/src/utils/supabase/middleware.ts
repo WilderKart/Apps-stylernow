@@ -32,5 +32,26 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // CONTROL DE ACCESO (Zero Trust) para /admin
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth/admin', request.url))
+    }
+
+    // Consultar el rol en base de datos
+    const { data: profile } = await supabase
+      .from('usuarios')
+      .select('role')
+      .eq('auth_id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      // Redirigir a login con error de acceso si no es admin
+      const failUrl = new URL('/auth/login', request.url)
+      failUrl.searchParams.set('error', 'Acceso denegado. No eres administrador.')
+      return NextResponse.redirect(failUrl)
+    }
+  }
+
   return supabaseResponse
 }

@@ -11,6 +11,7 @@ import {
 import EmailOtpField from '@/components/EmailOtpField'
 import PasswordSetupStep from '@/components/PasswordSetupStep'
 import type { ServiceCatalog } from '@/types'
+import { Country, State, City } from 'country-state-city'
 import { CheckCircle, Upload, Plus, X, MapPin } from 'lucide-react'
 
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false })
@@ -112,6 +113,16 @@ export default function OnboardingClient({ serviceCatalog }: OnboardingClientPro
   const [exteriorUrl, setExteriorUrl] = useState<string | null>(null)
   const [interiorUrl, setInteriorUrl] = useState<string | null>(null)
   const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number; address: string } | null>(null)
+  
+  // Selectores de Ubicación Estructurados
+  const [countryCode, setCountryCode] = useState('CO') // Por defecto Colombia
+  const [stateCode, setStateCode] = useState('')
+  const [cityName, setCityName] = useState('')
+
+  const selectedCityObj = stateCode && cityName 
+    ? City.getCitiesOfState(countryCode, stateCode).find(c => c.name === cityName) 
+    : null;
+  
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null)
   const [passwordSet, setPasswordSet] = useState(false)
 
@@ -212,7 +223,7 @@ export default function OnboardingClient({ serviceCatalog }: OnboardingClientPro
         category: s.category,
         image_url: s.customImageUrl || s.image_path,
       }))
-      const result = await addServicesToTenantAction(tenantId!, services)
+      const result = await addServicesToTenantAction(services)
       if (result.error) { setError(result.error); return }
       setStep(4)
     })
@@ -310,21 +321,66 @@ export default function OnboardingClient({ serviceCatalog }: OnboardingClientPro
               <label className="block text-sm font-semibold text-zinc-700 mb-1.5">Nombre de la barbería *</label>
               <input name="name" required placeholder="Ej: Kingdom Barbers" className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-zinc-700 mb-1.5">País *</label>
+                <select 
+                  value={countryCode} 
+                  onChange={e => { setCountryCode(e.target.value); setStateCode(''); setCityName('') }}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black font-medium"
+                >
+                  <option value="">Seleccionar...</option>
+                  {Country.getAllCountries().map(c => (
+                    <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-zinc-700 mb-1.5">Estado / Dpto *</label>
+                <select 
+                  value={stateCode} 
+                  onChange={e => { setStateCode(e.target.value); setCityName('') }}
+                  disabled={!countryCode}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black font-medium disabled:opacity-50"
+                >
+                  <option value="">Seleccionar...</option>
+                  {countryCode && State.getStatesOfCountry(countryCode).map(s => (
+                    <option key={s.isoCode} value={s.isoCode}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-zinc-700 mb-1.5">Ciudad *</label>
-                <input name="city" required placeholder="Bogotá" className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black" />
+                <select 
+                  value={cityName} 
+                  onChange={e => setCityName(e.target.value)}
+                  disabled={!stateCode}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black font-medium disabled:opacity-50"
+                >
+                  <option value="">Seleccionar...</option>
+                  {stateCode && City.getCitiesOfState(countryCode, stateCode).map(c => (
+                    <option key={c.name} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                <input type="hidden" name="city" value={cityName} />
               </div>
             </div>
+
             {/* Email with OTP verification */}
             <EmailOtpField onVerified={(email) => setVerifiedEmail(email)} />
+            
             {/* Map Section */}
             <div>
               <label className="block text-sm font-semibold text-zinc-700 mb-2">
                 <MapPin className="w-4 h-4 inline mr-1" /> Ubicación en el mapa *
               </label>
               <LocationPicker
-                onLocationSelect={(lat, lng, address) => setMapLocation({ lat, lng, address })}
+                onLocationSelect={(lat, lng, address) => {
+                  setMapLocation({ lat, lng, address })
+                }}
+                currentCity={cityName}
+                initialLat={selectedCityObj?.latitude ? parseFloat(selectedCityObj.latitude) : undefined}
+                initialLng={selectedCityObj?.longitude ? parseFloat(selectedCityObj.longitude) : undefined}
               />
               {mapLocation && (
                 <div className="mt-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-xs text-zinc-600">

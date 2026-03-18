@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { assertPermission, assertRateLimit } from '@/utils/permissions'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 
@@ -61,8 +62,29 @@ export async function createTenantAction(formData: FormData) {
   if (authError || !user) return { error: 'No autenticado' }
 
   const name = formData.get('name') as string
+
   const city = formData.get('city') as string
   const phone = formData.get('phone') as string
+
+  // --- Anti-duplicado Tenant (V10.6.1) ---
+  const { data: existingTenant } = await supabase
+    .from('tenants')
+    .select('id, status')
+    .eq('owner_id', user.id)
+    .maybeSingle()
+
+  if (existingTenant) {
+    // 🛡️ Sanar membresías huérfanas de pruebas previas
+    await supabase
+      .from('memberships')
+      .update({ tenant_id: existingTenant.id })
+      .eq('user_id', user.id);
+
+    // Retornar éxito y el tenant para que la UI redirija según el status
+    return { success: true, tenant: existingTenant }
+  }
+
+
   const address = formData.get('address') as string
   const email = (formData.get('email') as string) || user.email || ''
   const documentType = formData.get('document_type') as string
@@ -131,39 +153,145 @@ export async function createTenantAction(formData: FormData) {
   })
 
   // Update user role to MASTER
-  await supabase.from('users').update({ role: 'MASTER' }).eq('id', user.id)
+  await supabase.from('users').update({ role: 'master' }).eq('id', user.id)
+
+
+  // 🛡️ CAPA 1: Actualizar membresía vacía con la barbería creada (V10.6)
+  const { data: updatedMembers, error: updateMemberError } = await supabase
+    .from('memberships')
+    .update({ tenant_id: tenant.id })
+    .eq('user_id', user.id)
+    .select('id')
+
+  if (updateMemberError || !updatedMembers || updatedMembers.length === 0) {
+     console.error('[createTenantAction] Error vinculando membresía:', updateMemberError);
+     return { error: 'Inconsistencia de Seguridad: No se encontró tu membresía registrada. Por favor, reintenta.' }
+  }
+
 
   return { success: true, tenant }
 }
 
 // Step 2 — Add services (from catalog or custom)
+// ZERO TRUST v4: tenantId is NOT accepted from clients — resolved server-side from session
 export async function addServicesToTenantAction(
-  tenantId: string,
   selectedServices: Array<{
     catalog_id?: string
     name: string
     price: number
     duration_minutes: number
-    category: string
+    category?: string
     image_url?: string
   }>
 ) {
   const supabase = await createClient()
+  const headersList = await headers()
+  const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0] || headersList.get('x-real-ip') || 'unknown'
+  const userAgent = headersList.get('user-agent') || 'unknown'
+
+  // ① Autenticación real — nunca confiar en parámetros del request
   const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  // 🛡️ CAPA 4: Anti-Abusos - Rate Limit por IP y Usuario (10 peticiones / minuto)
+  try {
+    await assertRateLimit(user?.id || null, ipAddress, 'services.create', 10, 60)
+  } catch (err: any) {
+    return { error: 'Límite de peticiones excedido. Intenta más tarde.' }
+  }
+
   if (authError || !user) return { error: 'No autenticado' }
 
-  const toInsert = selectedServices.map(s => ({
-    tenant_id: tenantId,
-    name: s.name,
-    price: s.price,
-    duration_minutes: s.duration_minutes,
-    active: true,
-    catalog_id: s.catalog_id || null,
-    image_url: s.image_url || null,
-  }))
+  // ② Resolver tenant desde el owner_id — el cliente NUNCA envía el tenantId
+  const { data: tenant, error: tenantError } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('owner_id', user.id)
+    .maybeSingle()
 
-  const { error } = await supabase.from('services').insert(toInsert)
-  if (error) return { error: error.message }
+  if (tenantError) return { error: 'Error al verificar tu barbería.' }
+  if (!tenant) return { error: 'No tienes una barbería registrada.' }
+
+  // 🛡️ CAPA 3: RBAC Granular - Verificar Permiso 'services.create'
+  try {
+    await assertPermission(user.id, tenant.id, 'services.create')
+  } catch (err: any) {
+    return { error: err.message }
+  }
+
+  // ③ Validar el array de servicios
+  if (!Array.isArray(selectedServices) || selectedServices.length === 0) {
+    return { error: 'Debes seleccionar al menos un servicio.' }
+  }
+  if (selectedServices.length > 50) {
+    return { error: 'No puedes agregar más de 50 servicios a la vez.' }
+  }
+
+  // ④ Sanitizar y validar cada item
+  const validationErrors: string[] = []
+  const sanitized = selectedServices.map((s, i) => {
+    const name = s.name?.trim().replace(/\s+/g, ' ') ?? ''
+    const price = Number(s.price)
+    const duration = Number(s.duration_minutes)
+
+    if (!name || name.length === 0) validationErrors.push(`Servicio #${i + 1}: nombre requerido`)
+    if (name.length > 60) validationErrors.push(`Servicio #${i + 1}: nombre excede 60 caracteres`)
+    if (!Number.isFinite(price) || price <= 0) validationErrors.push(`"${name}": precio inválido`)
+    if (price > 20_000_000) validationErrors.push(`"${name}": precio excede el límite permitido`)
+    if (!Number.isFinite(duration) || duration < 15 || duration > 480) {
+      validationErrors.push(`"${name}": duración debe estar entre 15 y 480 minutos`)
+    }
+
+    return {
+      name,
+      price,
+      duration_minutes: duration,
+      catalog_id: s.catalog_id || null,
+      image_url: s.image_url || null,
+    }
+  })
+
+  if (validationErrors.length > 0) {
+    return { error: validationErrors[0] }
+  }
+
+  // ⑤ Deduplicar semánticamente dentro del lote (case-insensitive)
+  const seen = new Set<string>()
+  const deduped = sanitized.filter(s => {
+    const key = s.name.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  // ⑥ Inserción transaccional vía RPC (atómica — si uno falla, rollback total)
+  const { error: rpcError } = await supabase.rpc('insert_services_batch', {
+    p_tenant_id: tenant.id,
+    p_services: deduped,
+  })
+
+  if (rpcError) {
+    // ⑦ Captura de error de duplicado con mensaje UX claro
+    if (rpcError.code === '23505' || rpcError.message?.includes('unique_service_name_per_tenant')) {
+      return { error: 'Uno o más servicios ya existen en tu barbería.' }
+    }
+    console.error('[addServicesToTenantAction] RPC error:', rpcError)
+    return { error: `Error al guardar servicios: ${rpcError.message}` }
+  }
+
+  // ⑧ Audit log persistente y enriquecido
+  const adminClient = getServiceClient()
+  await adminClient.from('audit_logs').insert({
+    user_id: user.id,
+    tenant_id: tenant.id,
+    action: 'services_bulk_insert',
+    context: {
+      count: deduped.length,
+      service_names: deduped.map(s => s.name),
+      ip: ipAddress,
+      user_agent: userAgent,
+    },
+  })
+
   return { success: true }
 }
 
