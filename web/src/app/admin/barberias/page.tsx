@@ -8,9 +8,9 @@ export default async function AdminBarberias() {
   const supabase = await createClient()
 
   const { data: barberias } = await supabase
-    .from('barberias')
+    .from('tenants')
     .select('*')
-    .order('creado_en', { ascending: false })
+    .order('created_at', { ascending: false })
 
   return (
     <div className="flex flex-col w-full h-full max-w-7xl mx-auto p-4 md:p-8 text-[#1A1A1A]">

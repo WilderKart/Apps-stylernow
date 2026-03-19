@@ -20,7 +20,7 @@ export async function sendEmailOtpAction(email: string) {
 
   // Send email via Resend (cheapest: free tier = 3000 emails/mes)
   const { error: emailError } = await resend.emails.send({
-    from: 'StylerNow <no-reply@stylernow.co>',
+    from: 'StylerNow <no-reply@stylernow.com>',
     to: email,
     subject: `${code} es tu código de verificación — StylerNow`,
     html: `
@@ -51,7 +51,10 @@ export async function sendEmailOtpAction(email: string) {
     `,
   })
 
-  if (emailError) return { error: 'No se pudo enviar el correo. Verifica que la dirección sea válida.' }
+  if (emailError) {
+    console.error('Resend Error:', emailError)
+    return { error: 'No se pudo enviar el correo. Verifica que la dirección sea válida.' }
+  }
   return { success: true }
 }
 

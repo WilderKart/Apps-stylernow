@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { setMasterPasswordAction } from '@/app/onboarding/password-actions'
 import { Eye, EyeOff, Lock, CheckCircle, ShieldCheck, X } from 'lucide-react'
+import NotificationToast from './NotificationToast'
 
 interface PasswordSetupStepProps {
   onSuccess: () => void
@@ -141,9 +142,12 @@ export default function PasswordSetupStep({ onSuccess }: PasswordSetupStepProps)
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-            <X className="w-4 h-4 flex-shrink-0" /> {error}
-          </div>
+          <NotificationToast 
+            type="error" 
+            title="Error de Seguridad" 
+            message={error} 
+            onClose={() => setError(null)} 
+          />
         )}
 
         <button

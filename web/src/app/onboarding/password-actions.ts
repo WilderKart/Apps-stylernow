@@ -35,6 +35,12 @@ export async function setMasterPasswordAction(password: string, confirmPassword:
   // Mark must_change_password = false (it's being set now, not reset)
   await supabase.from('users').update({ must_change_password: false }).eq('id', user.id)
 
+  // Update onboarding step to 3 (Services)
+  await supabase
+    .from('tenants')
+    .update({ onboarding_step: 3 })
+    .eq('owner_id', user.id)
+
   return { success: true }
 }
 

@@ -23,13 +23,19 @@ export default async function DashboardHome() {
   if (!membership) redirect('/onboarding')
 
   // Cargar tenant desde la relación de membresía
-  const { data: tenant } = await supabase
+  const { data: tenantData } = await supabase
     .from('tenants')
     .select('*')
     .eq('id', membership.tenant_id)
     .single() as { data: Tenant | null }
 
-  if (!tenant) redirect('/onboarding')
+  if (!tenantData) redirect('/onboarding')
+  
+  const tenant = tenantData as Tenant
+
+  // Redirecciones inquebrantables por status
+  if (tenant.status === ('pending' as any) || tenant.status === 'PENDING_REVIEW') redirect('/onboarding/status')
+  if (tenant.status === ('rejected' as any) || tenant.status === 'REJECTED') redirect('/onboarding/rejected')
 
   // Check trial expiry for FREE plan
   const isOnTrial = tenant.plan === 'FREE'
@@ -56,7 +62,7 @@ export default async function DashboardHome() {
   } catch (_) { /* table may not have columns yet — non-blocking */ }
 
   // Tenant status badge
-  const isPendingReview = tenant.status === 'PENDING_REVIEW'
+  const isPendingReview = tenant.status === ('pending' as any) || tenant.status === ('PENDING_REVIEW' as any)
 
   return (
     <div className="flex flex-col gap-6">

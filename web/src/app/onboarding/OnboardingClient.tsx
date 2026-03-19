@@ -14,11 +14,16 @@ import type { ServiceCatalog } from '@/types'
 import { Country, State, City } from 'country-state-city'
 import { CheckCircle, Upload, Plus, X, MapPin } from 'lucide-react'
 
+import NotificationToast from '@/components/NotificationToast'
+
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false })
 
 interface OnboardingClientProps {
   serviceCatalog: ServiceCatalog[]
+  initialStep?: number
+  existentTenantId?: string | null
 }
+
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5
 
@@ -96,12 +101,13 @@ function ImageUpload({ label, value, onChange, uploading, setUploading, bucket }
   )
 }
 
-export default function OnboardingClient({ serviceCatalog }: OnboardingClientProps) {
-  const [step, setStep] = useState<Step>(0)
+export default function OnboardingClient({ serviceCatalog, initialStep = 0, existentTenantId = null }: OnboardingClientProps) {
+  const [step, setStep] = useState<Step>(initialStep as Step)
   const [isPending, startTransition] = useTransition()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [tenantId, setTenantId] = useState<string | null>(null)
+  const [tenantId, setTenantId] = useState<string | null>(existentTenantId)
+
 
   // Step 0: Identity
   const [docType, setDocType] = useState('cedula')
@@ -135,6 +141,10 @@ export default function OnboardingClient({ serviceCatalog }: OnboardingClientPro
   const [customServiceCategory, setCustomServiceCategory] = useState('corte')
   const [customServiceImageUrl, setCustomServiceImageUrl] = useState<string | null>(null)
   const [showCustomForm, setShowCustomForm] = useState(false)
+
+  // T&C states
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [shakeTerms, setShakeTerms] = useState(false)
 
   const categories = Array.from(new Set(serviceCatalog.map(s => s.category)))
 
@@ -230,10 +240,20 @@ export default function OnboardingClient({ serviceCatalog }: OnboardingClientPro
   }
 
   const handleComplete = () => {
+    if (!acceptedTerms) {
+      setShakeTerms(true)
+      setTimeout(() => setShakeTerms(false), 500)
+      setError('Debes aceptar los Términos y Condiciones para finalizar.')
+      return
+    }
+    setError(null)
     startTransition(async () => {
-      const result = await completeTenantOnboardingAction(tenantId!)
+      const termsVersion = "1.0.0"
+      const termsEvidence = navigator.userAgent
+      
+      const result = await completeTenantOnboardingAction(tenantId!, termsVersion, termsEvidence)
       if (result.error) { setError(result.error); return }
-      setStep(4)
+      setStep(5)
     })
   }
 
@@ -259,10 +279,12 @@ export default function OnboardingClient({ serviceCatalog }: OnboardingClientPro
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium border border-red-100 flex gap-2 items-center">
-          ⚠️ {error}
-          <button onClick={() => setError(null)} className="ml-auto"><X className="w-4 h-4" /></button>
-        </div>
+        <NotificationToast 
+          type="error" 
+          title="Inconsistencia de Seguridad" 
+          message={error} 
+          onClose={() => setError(null)} 
+        />
       )}
 
       {/* STEP 0: Identity Verification */}
@@ -524,6 +546,21 @@ export default function OnboardingClient({ serviceCatalog }: OnboardingClientPro
               </div>
             ))}
           </div>
+          
+          <div className={`mt-6 p-4 rounded-xl border transition-all ${shakeTerms ? 'border-red-500 bg-red-50 animate-shake' : 'border-zinc-200 bg-zinc-50'}`}>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={acceptedTerms}
+                onChange={e => setAcceptedTerms(e.target.checked)}
+                className="w-5 h-5 mt-0.5 accent-black rounded" 
+              />
+              <span className="text-sm text-zinc-600 leading-snug">
+                He leído y acepto los <a href="#" className="font-bold underline text-black">Términos y Condiciones</a> y la <a href="#" className="font-bold underline text-black">Política de Privacidad</a>. Entiendo que mi barbería será revisada por el equipo administrativo antes de activarse.
+              </span>
+            </label>
+          </div>
+
           <button onClick={handleComplete} disabled={isLoading} className="mt-6 w-full bg-black text-white py-3.5 rounded-xl font-bold text-sm disabled:opacity-50 hover:bg-zinc-800 transition-colors">
             {isLoading ? 'Finalizando...' : '¡Finalizar configuración! →'}
           </button>
@@ -537,13 +574,15 @@ export default function OnboardingClient({ serviceCatalog }: OnboardingClientPro
             <CheckCircle className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-extrabold text-black mb-2">¡Barbería registrada!</h2>
-          <p className="text-zinc-500 mb-2 text-sm">Tu solicitud fue enviada. El equipo de <span className="font-bold text-black">StylerNow</span> la revisará en las próximas 24h.</p>
+          <p className="text-zinc-500 mb-2 text-sm">
+            Tu solicitud fue enviada. El equipo de <span className="font-bold text-black">StylerNow</span> la revisará en las próximas 24h.
+          </p>
           <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl my-4 text-left">
             <p className="text-amber-800 text-sm font-semibold">⏳ Prueba gratuita activa por 7 días</p>
             <p className="text-amber-700 text-xs mt-1">Puedes explorar la plataforma. Límites: 30 reservas, 20 clientes, 10 recordatorios.</p>
           </div>
-          <a href="/dashboard" className="block w-full bg-black text-white py-3.5 rounded-xl font-bold text-sm hover:bg-zinc-800 transition-colors mt-4">
-            Ir al Dashboard →
+          <a href="/onboarding/status" className="block w-full bg-black text-white py-3.5 rounded-xl font-bold text-sm hover:bg-zinc-800 transition-colors mt-4">
+            Ir a Estado de Cuenta →
           </a>
         </div>
       )}

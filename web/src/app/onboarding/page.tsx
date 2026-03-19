@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import OnboardingClient from './OnboardingClient'
 import type { ServiceCatalog } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export default async function OnboardingPage() {
   const supabase = await createClient()
 
@@ -12,11 +14,11 @@ export default async function OnboardingPage() {
   // Check if already has a tenant (skip onboarding)
   const { data: existingTenant } = await supabase
     .from('tenants')
-    .select('id, status')
+    .select('id, status, onboarding_completed, onboarding_step')
     .eq('owner_id', user.id)
-    .single()
+    .maybeSingle()
 
-  if (existingTenant) {
+  if (existingTenant && existingTenant.onboarding_completed) {
      const status = existingTenant.status || 'pending_review';
      if (status === 'approved') {
         redirect('/dashboard');
@@ -24,6 +26,7 @@ export default async function OnboardingPage() {
         redirect('/onboarding/status');
      }
   }
+
 
 
 
@@ -46,7 +49,11 @@ export default async function OnboardingPage() {
         <p className="text-zinc-500 text-sm mt-2">Solo toma 3 minutos y quedas listo para recibir clientes.</p>
       </div>
 
-      <OnboardingClient serviceCatalog={(catalog || []) as ServiceCatalog[]} />
+      <OnboardingClient 
+        serviceCatalog={(catalog || []) as ServiceCatalog[]} 
+        initialStep={existingTenant?.onboarding_step || 0}
+        existentTenantId={existingTenant?.id}
+      />
     </div>
   )
 }

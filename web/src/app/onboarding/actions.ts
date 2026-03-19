@@ -156,17 +156,20 @@ export async function createTenantAction(formData: FormData) {
   await supabase.from('users').update({ role: 'master' }).eq('id', user.id)
 
 
-  // 🛡️ CAPA 1: Actualizar membresía vacía con la barbería creada (V10.6)
-  const { data: updatedMembers, error: updateMemberError } = await supabase
+  // 🛡️ CAPA 1: Vincular membresía con la barbería creada (V10.7 - Zero Trust)
+  const { error: upsertMemberError } = await supabase
     .from('memberships')
-    .update({ tenant_id: tenant.id })
-    .eq('user_id', user.id)
-    .select('id')
+    .upsert({ 
+      user_id: user.id, 
+      tenant_id: tenant.id, 
+      role: 'master' 
+    })
 
-  if (updateMemberError || !updatedMembers || updatedMembers.length === 0) {
-     console.error('[createTenantAction] Error vinculando membresía:', updateMemberError);
-     return { error: 'Inconsistencia de Seguridad: No se encontró tu membresía registrada. Por favor, reintenta.' }
+  if (upsertMemberError) {
+     console.error('[createTenantAction] Error vinculando membresía:', upsertMemberError);
+     return { error: 'Inconsistencia de Seguridad: Error al registrar tu membresía administrativa.' }
   }
+
 
 
   return { success: true, tenant }
@@ -210,6 +213,22 @@ export async function addServicesToTenantAction(
 
   if (tenantError) return { error: 'Error al verificar tu barbería.' }
   if (!tenant) return { error: 'No tienes una barbería registrada.' }
+
+  // 🛡️ Autocurado (Self-Healing): Garantizar que el dueño tenga membresía administrativa
+  const admin = getServiceClient()
+  const { error: upsertError } = await admin
+    .from('memberships')
+    .upsert({
+      user_id: user.id,
+      tenant_id: tenant.id,
+      role: 'master'
+    }, { onConflict: 'tenant_id,user_id' })
+
+  if (upsertError) {
+    console.error('[addServicesToTenantAction] Autocurado falló:', upsertError)
+    return { error: 'Inconsistencia de Seguridad: Error al otorgar tu membresía administrativa.' }
+  }
+
 
   // 🛡️ CAPA 3: RBAC Granular - Verificar Permiso 'services.create'
   try {
@@ -292,20 +311,84 @@ export async function addServicesToTenantAction(
     },
   })
 
+  // Update onboarding step to 4 (Schedules)
+  await supabase
+    .from('tenants')
+    .update({ onboarding_step: 4 })
+    .eq('id', tenant.id)
+
   return { success: true }
 }
 
-// Step 3 — Complete onboarding
-export async function completeTenantOnboardingAction(tenantId: string) {
+// Step 3 — Complete onboarding (Strict Fintech with T&C, Audit & Resend)
+export async function completeTenantOnboardingAction(tenantId: string, termsVersion: string = '1.0.0', termsEvidenceRaw: string = '') {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return { error: 'No autenticado' }
 
-  const { error } = await supabase
-    .from('tenants').update({ onboarding_completed: true, onboarding_step: 4 })
-    .eq('id', tenantId).eq('owner_id', user.id)
+  const termsEvidence = `${termsEvidenceRaw} | IP fallback`;
+  const adminClient = getServiceClient()
+
+  // 1. Guardar T&C y cambiar Estado Strict ('pending') a nivel BD (bypass RLS por seguridad si owner no fue asignado aun, pero se chequea owner_id)
+  const { error } = await adminClient
+    .from('tenants')
+    .update({ 
+      onboarding_completed: true, 
+      onboarding_step: 4,
+      status: 'pending',
+      terms_accepted_at: new Date().toISOString(),
+      terms_version: termsVersion,
+      terms_evidence: termsEvidence
+    })
+    .eq('id', tenantId)
+    .eq('owner_id', user.id)
 
   if (error) return { error: error.message }
+
+  // 2. Crear Log de Auditoría
+  await adminClient.from('audit_logs').insert({
+    actor_id: user.id,
+    target_id: tenantId,
+    action: 'TENANT_CREATED_PENDING',
+    metadata: {
+      termsVersion,
+      termsEvidence
+    }
+  })
+
+  // 3. Notificación IN-APP para Administradores (o se guarda temporal si no hay admins unificados, aquí solo como ejemplo si admin = rol founder)
+  // Opcional según esquema.
+
+  // 4. Notificaciones por Email (Resend)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const { Resend } = await import('resend')
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      
+      const { data: tenantData } = await adminClient.from('tenants').select('name, email').eq('id', tenantId).single()
+      
+      // Correo al ADMIN (Dueño del ecosistema) notificando nueva solicitud
+      const adminEmail = "soportestylernow@gmail.com" // o process.env.ADMIN_EMAIL
+      await resend.emails.send({
+        from: 'StylerNow OS <noreply@notificaciones.stylernow.co>',
+        to: adminEmail,
+        subject: `⚠️ Nueva Barbería Pendiente: ${tenantData?.name}`,
+        html: `<p>El master de la barbería <strong>${tenantData?.name}</strong> ha finalizado el onboarding y aceptado T&C.</p><p>Revisa tu panel de administración (Super Admin) para auditar la información y aprobarla o rechazarla.</p>`
+      })
+
+      // Correo al MASTER notificando que está bajo revisión
+      if (tenantData?.email) {
+         await resend.emails.send({
+           from: 'StylerNow Team <noreply@notificaciones.stylernow.co>',
+           to: tenantData.email,
+           subject: 'Tu solicitud está en revisión ⏳',
+           html: `<p>Hola,</p><p>Hemos recibido toda la información y hemos registrado la aceptación de nuestros Términos y Condiciones. Nuestro equipo está revisando tu cuenta de <strong>${tenantData.name}</strong> para activarla lo más pronto posible (Máximo 24h).</p><p>Te notificaremos por este mismo medio tan pronto aprueben tu Barbería.</p>`
+         })
+      }
+    } catch (e) {
+      console.error("No se pudieron enviar notificaciones de onboarding:", e)
+    }
+  }
   revalidatePath('/dashboard')
   return { success: true }
 }
