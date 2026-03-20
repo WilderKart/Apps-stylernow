@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { Eye, CheckCircle2, XCircle } from 'lucide-react';
 import { approveTenantAction, rejectTenantAction } from '@/app/admin/admin-actions';
+import TenantDetailsModal from '@/components/admin/TenantDetailsModal';
 
 interface Tenant {
   id: string;
@@ -16,6 +17,7 @@ interface Tenant {
 export default function BarberiaList({ initialBarberias }: { initialBarberias: Tenant[] }) {
   const [list, setList] = useState(initialBarberias);
   const [isPending, startTransition] = useTransition();
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
   const handleApprove = async (id: string) => {
     if (!confirm('¿Estás seguro de APROBAR esta barbería? Se le notificará al dueño y podrá empezar a operar.')) return
@@ -49,6 +51,7 @@ export default function BarberiaList({ initialBarberias }: { initialBarberias: T
   };
 
   return (
+    <>
     <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm min-w-[800px]">
       <table className="w-full text-left border-collapse">
         <thead>
@@ -117,7 +120,11 @@ export default function BarberiaList({ initialBarberias }: { initialBarberias: T
                     </button>
                   </>
                 )}
-                <button className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-lg ml-2" title="Ver Detalles">
+                <button 
+                  onClick={() => setSelectedTenantId(b.id)}
+                  className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-lg ml-2" 
+                  title="Ver Detalles"
+                >
                   <Eye className="w-4 h-4" />
                 </button>
               </td>
@@ -133,5 +140,13 @@ export default function BarberiaList({ initialBarberias }: { initialBarberias: T
         </tbody>
       </table>
     </div>
+    
+    {selectedTenantId && (
+      <TenantDetailsModal 
+        tenantId={selectedTenantId} 
+        onClose={() => setSelectedTenantId(null)} 
+      />
+    )}
+    </>
   );
 }
