@@ -14,6 +14,17 @@ export async function getProactiveAIInsights(tenantId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  // 0. VERIFICAR FEATURE TOGGLE GLOBAL DE ADMINISTRACIÓN
+  const { data: featureToggle } = await supabase
+    .from('saas_features')
+    .select('active')
+    .eq('id', 'ai_marketing')
+    .maybeSingle()
+
+  if (featureToggle && !featureToggle.active) {
+    return { error: 'El módulo AI Growth Engine se encuentra desactivado temporalmente por la administración.' }
+  }
+
   // 1. REVISAR CACHÉ (Evitar facturación excesiva e IA errática en un mismo día)
   const { data: cachedLog } = await supabase
     .from('ai_insight_logs')

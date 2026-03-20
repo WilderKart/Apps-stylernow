@@ -53,7 +53,7 @@ export default async function AdminSubscriptions() {
       </div>
 
       <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-        <h3 className="text-lg font-bold text-[#1A1A1A] mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5 text-[#101010]" /> Historial de Transacciones (Simulado)</h3>
+        <h3 className="text-lg font-bold text-[#1A1A1A] mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5 text-[#101010]" /> Historial de Transacciones</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -65,17 +65,10 @@ export default async function AdminSubscriptions() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
-              <tr className="hover:bg-zinc-50">
-                <td className="px-4 py-3 text-xs text-zinc-600">Hoy</td>
-                <td className="px-4 py-3 text-sm font-bold">$15.00 USD</td>
-                <td className="px-4 py-3 text-xs">MercadoPago</td>
-                <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-[10px] font-bold">Completado</span></td>
-              </tr>
-              <tr className="hover:bg-zinc-50">
-                <td className="px-4 py-3 text-xs text-zinc-600">Ayer</td>
-                <td className="px-4 py-3 text-sm font-bold">$29.00 USD</td>
-                <td className="px-4 py-3 text-xs">Tarjeta de Crédito</td>
-                <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-[10px] font-bold">Completado</span></td>
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-xs text-zinc-400 font-medium italic">
+                  No se registran transacciones de pago de suscripción aún.
+                </td>
               </tr>
             </tbody>
           </table>
