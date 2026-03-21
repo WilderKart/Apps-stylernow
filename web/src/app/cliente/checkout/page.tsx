@@ -1,10 +1,11 @@
 import React from 'react';
 import { ChevronLeft, CheckCircle2, ShieldCheck, CreditCard } from 'lucide-react';
 import Link from 'next/link';
+import PaymentButton from '@/components/cliente/PaymentButton';
 
 export default function CheckoutReserva() {
   return (
-    <div className="flex flex-col w-full min-h-screen bg-zinc-50 font-sans pb-24">
+    <div className="flex flex-col w-full min-h-screen bg-zinc-50 font-sans pb-24 relative">
       {/* Header */}
       <header className="px-5 py-6 bg-white border-b border-zinc-100 flex items-center justify-between sticky top-0 z-40">
         <Link href="/cliente" className="p-2 -ml-2 hover:bg-zinc-50 rounded-full transition-colors">
@@ -79,11 +80,8 @@ export default function CheckoutReserva() {
       </div>
 
       {/* MP Action Bottom */}
-      <div className="absolute bottom-16 left-0 right-0 bg-white border-t border-zinc-100 p-4 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-        <button className="w-full bg-[#009EE3] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-[#0089C5] transition-colors shadow-lg shadow-[#009EE3]/20">
-          <CreditCard className="w-5 h-5" />
-          Pagar con MercadoPago
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-4 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+        <PaymentButton />
         <p className="text-[10px] text-center text-zinc-400 font-medium mt-3 uppercase tracking-widest">
           Pagos seguros por MercadoPago
         </p>

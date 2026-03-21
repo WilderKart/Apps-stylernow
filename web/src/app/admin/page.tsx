@@ -1,6 +1,6 @@
 import React from 'react';
 import { createClient } from '@/utils/supabase/server';
-import { DollarSign, Eye, RefreshCw, Users, TrendingUp } from 'lucide-react';
+import { DollarSign, Eye, RefreshCw, Users, TrendingUp, AlertTriangle } from 'lucide-react';
 import { fetchAllBannersAction } from './banner-actions';
 import BannerManager from './BannerManager';
 import IncomeChart from './IncomeChart';
@@ -25,20 +25,30 @@ export default async function AdminHome() {
     .select('*', { count: 'exact', head: true })
     .eq('activa', true)
 
-  // 3. Volumen de Reservas (Ejemplo: Hoy)
-  const today = new Date().toISOString().split('T')[0]
-  const { count: dailyBookings } = await supabase
-    .from('reservas')
-    .select('*', { count: 'exact', head: true })
+  // 3. Ingresos Reales desde Ledger (Fuente Única de Verdad)
+  const { data: ingresosLedger } = await supabase
+    .from('transacciones_financieras')
+    .select('monto')
+    .eq('estado', 'aprobado');
 
-  // 4. Cargar últimas 5 barberías
+  const totalIncomes = ingresosLedger?.reduce((sum: number, trx: any) => sum + Number(trx.monto), 0) || 0;
+
+  // 4. Alertas de Anomalías / Auditoría
+  const { data: anomalías } = await supabase
+    .from('audit_eventos')
+    .select('*')
+    .ilike('tipo_evento', 'anomaly_%')
+    .order('creado_en', { ascending: false })
+    .limit(5);
+
+  // 5. Cargar últimas 5 barberías
   const { data: recentTenants } = await supabase
     .from('barberias')
     .select('*')
     .order('creado_en', { ascending: false })
     .limit(5)
 
-  // 5. Datos para Gráfico (Últimos 7 días)
+  // 6. Datos para Gráfico (Últimos 7 días)
   const lastWeek = new Date();
   lastWeek.setDate(lastWeek.getDate() - 7);
   
@@ -85,9 +95,9 @@ export default async function AdminHome() {
              <div className="absolute top-0 right-0 p-4">
                <DollarSign className="w-8 h-8 text-green-500" />
              </div>
-             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">MRR Estimado</p>
-             <h2 className="text-3xl font-black text-[#101010] mb-2">${((activeTenants || 0) * 59).toLocaleString()}</h2>
-             <p className="text-xs font-bold text-green-500 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Proyección Studio</p>
+             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Ingresos Reales (Ledger)</p>
+             <h2 className="text-3xl font-black text-[#101010] mb-2">${totalIncomes.toLocaleString()}</h2>
+             <p className="text-xs font-bold text-green-500 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Auditoría Zero Trust</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-zinc-200 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -139,6 +149,35 @@ export default async function AdminHome() {
             <p className="text-lg font-extrabold text-green-400 mt-1">Por calcular...</p>
           </div>
         </div>
+      </div>
+
+      {/* Panel de Auditoría / Anomalías */}
+      <div className="mb-8 bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+         <div className="flex items-center gap-2 mb-4">
+           <div className="p-2 bg-red-50 rounded-lg text-red-500">
+             <AlertTriangle className="w-5 h-5" /> 
+           </div>
+           <h3 className="text-xl font-black text-[#101010]">Alertas de Auditoría / Anomalías</h3>
+         </div>
+         {anomalías && anomalías.length > 0 ? (
+           <ul className="divide-y divide-zinc-100">
+             {anomalías.map((a: any) => (
+                <li key={a.id} className="py-4 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                   <div>
+                     <p className="font-bold text-zinc-800 tracking-tight">{a.tipo_evento.replace('anomaly_', '').replace(/_/g, ' ').toUpperCase()}</p>
+                     <p className="text-zinc-400 text-xs mt-0.5">{new Date(a.creado_en).toLocaleString('es-CO')}</p>
+                   </div>
+                   <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-100 max-w-md overflow-hidden text-ellipsis">
+                     <code className="text-[11px] text-zinc-600 font-mono">{JSON.stringify(a.payload)}</code>
+                   </div>
+                </li>
+             ))}
+           </ul>
+         ) : (
+           <div className="bg-zinc-50 p-4 rounded-xl text-center text-sm text-zinc-500 font-medium">
+             Sin anomalías críticas detectadas por el Ledger.
+           </div>
+         )}
       </div>
 
       {/* Recents Tenants Table */}
